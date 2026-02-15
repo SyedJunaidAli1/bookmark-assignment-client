@@ -4,8 +4,16 @@ import { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL!;
 
+interface Bookmark {
+  id: string;
+  url: string;
+  title: string;
+  description?: string;
+  tags?: string[];
+}
+
 export default function Home() {
-  const [bookmarks, setBookmarks] = useState<any[]>([]);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState("");
 
@@ -41,7 +49,7 @@ export default function Home() {
       return;
     }
 
-    await fetch(`${API}/bookmarks`, {
+    const res = await fetch(`${API}/bookmarks`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -53,6 +61,12 @@ export default function Home() {
           : [],
       }),
     });
+
+    if (!res.ok) {
+      const error = await res.json();
+      alert(error.error || "Failed to create bookmark");
+      return;
+    }
 
     setForm({
       url: "",
@@ -70,6 +84,21 @@ export default function Home() {
 
     await fetch(`${API}/bookmarks/${id}`, {
       method: "DELETE",
+    });
+
+    fetchBookmarks();
+  }
+
+  // EDIT
+  async function editBookmark(b: any) {
+    const title = prompt("Enter new title", b.title);
+
+    if (!title) return;
+
+    await fetch(`${API}/bookmarks/${b.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
     });
 
     fetchBookmarks();
@@ -147,7 +176,7 @@ export default function Home() {
 
             <p className="text-sm">{b.description}</p>
 
-            <div className="flex gap-2 flex-wrap mt-2">
+            <div className="flex gap-6 flex-wrap mt-2">
               {b.tags?.map((tag: string) => (
                 <span
                   key={tag}
@@ -160,8 +189,15 @@ export default function Home() {
             </div>
 
             <button
+              onClick={() => editBookmark(b)}
+              className="px-2 py-1 bg-blue-500 text-sm mt-2 rounded-md"
+            >
+              Edit
+            </button>
+
+            <button
               onClick={() => deleteBookmark(b.id)}
-              className="text-red-500 text-sm mt-2"
+              className=" px-2 py-1 bg-red-500 text-sm mt-2 ml-2 rounded-md"
             >
               Delete
             </button>
